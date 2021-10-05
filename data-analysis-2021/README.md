@@ -3,7 +3,8 @@
 ## 이용 방법
 - analysis/data-analysis-2021 디렉토리 내에서 venv를 활성화(activation)
 - pip install -r requirements.txt 수행
-- `jupyter notebook` 명령을 통해서 주피터 노트북 실행
+- `jupyter notebook` 혹은 `jupyter lab` 명령을 통해서 주피터 노트북 실행
+- http://localhost:8888/ 로 접근하여 주피터 노트북 이용
 
 ### Windows
 ```shell
