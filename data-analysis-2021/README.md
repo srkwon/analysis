@@ -26,3 +26,15 @@ pip install -r requirements.txt
 # 가상환경 빠져 나가기
 deactivate
 ```
+
+## Jupyterlab R 코드 실행
+- 주피터에서는 기본적으로 python 코드 실행이 가능하지만, R kernel 설치로 R 코드 실행도 가능
+- 먼저 R 바이너리를 OS에 환경변수로 등록 필요
+  - `윈도우 기준, C:\Program Files\R\R-4.0.1\bin 과 같은 경로에 설치되어 있음`
+- Rstudio가 아닌 커맨드 프롬프트에서 아래 명령을 실행
+- 아래 명령어 수행이 끝난후에, 주피터 실행후 R kernel 선택 가능한지 확인
+```shell
+install.packages('devtools')
+devtools::install_github('IRkernel/IRkernel')
+IRkernel::installspec()
+```
