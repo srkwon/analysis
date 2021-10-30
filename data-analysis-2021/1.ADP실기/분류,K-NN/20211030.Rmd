@@ -1,0 +1,247 @@
+---
+title: "타이타닉 문제 풀이"
+output:
+  html_document: default
+---
+
+# 문제
+```
+#---------------------------------------------------------------------------------------
+# Q1) cabib, embarked변수의 값 중 ""로 처리된 값을 NA로 바꾸고 아래의 데이터 테이블을 보고 
+#     문자형, 범주형 변수들을 각각 character, factor형으로 변환하시오.
+#     또, 수치형 변수가 NA인 값을 중앙값으로 대체하고, 범주형 변수가 NA인 값을 최빈값으로 대체하고
+#     age변수를 아래의 표와 같이 구간화하여 age_1이라는 변수를 생성하고 추가하시오. 
+#---------------------------------------------------------------------------------------
+
+
+
+#---------------------------------------------------------------------------------------
+# Q2) 전처리가 완료된 titanic 데이터를 train(70%), test(30%) 데이터로 분할하시오.
+#    (set.seed(12345)를 실행한 후 데이터를 분할하시오.) 
+#    또, train 데이터로 종속변수인 survived(생존 여부)를 독립변수 pclass, sex, sibsp, parch, 
+#    fare, embarked로 지정하여 예측하는 분류모델을 3개 이상 생성하고 test 데이터에 대한 
+#    예측값을 csv파일로 각각 제출하시오.
+#---------------------------------------------------------------------------------------
+
+
+
+#---------------------------------------------------------------------------------------
+# Q3) 생성된 3개의 분류모델에 대해 성과분석을 실시하여 정확도를 비교하여 설명하시오. 
+#     또, ROC curve를 그리고 AUC값을 산출하시오.
+#---------------------------------------------------------------------------------------
+```
+
+
+# 초기화 및 R 패키지 로딩
+- `tidyverse, caret, forcast` 패키지 로딩
+
+```{r, warning = FALSE, message = FALSE}
+# 초기화 및 R 패키지 로딩
+#install.packages("tidyverse")
+#install.packages("rpart")
+#install.packages("caret")
+#install.packages("pROC")
+# install.packages("DMwR")
+# install.packages( "https://cran.r-project.org/src/contrib/Archive/DMwR/DMwR_0.4.1.tar.gz", repos=NULL, type="source" )
+
+library(tidyverse)
+library(caret)
+library(pROC)
+library(kknn)
+library(DMwR)
+
+search()
+sessionInfo()
+
+# 분석 전 불필요한 객체 삭제 처리
+rm(list = ls())
+
+```
+
+# 데이터 수집
+
+```{r, warning = FALSE, message = FALSE}
+getwd()
+
+# 데이터 수집
+data = read.csv(file = "./excercise/titanic.csv")
+
+```
+
+# 데이터 탐색 및 준비
+- `head`, `str` , `summary`, `hist`, `cor` 등으로 데이터 확인
+- 결측치, 이상치에 대한 처리
+- 추가 변수에 대한 처리
+- 훈련데이터와 테스트데이터로 분리
+
+```{r, warning = FALSE, message = FALSE}
+
+summary(data)
+str(data)
+
+
+# cabib, embarked변수의 값 중 ""로 처리된 값을 NA로 바꾸고
+data$cabin <- ifelse(data$cabin == "", NA, data$cabin)
+data$embarked <- ifelse(data$embarked == "", NA, data$embarked)
+
+# 범주형 데이터로 변환
+data$sex <- as.factor(data$sex)
+data$survived <- as.factor(data$survived)
+data$embarked <- as.factor(data$embarked)
+
+# 수치형은 중앙값으로 대체, 범주형은 최빈값으로 대체
+sum(!complete.cases(data))
+
+data.2 <- centralImputation(data)
+
+sum(!complete.cases(data.2))
+
+str(data.2)
+
+if(data.2$age >=0 & data.2$age <10) {
+  data.2$age_1 <- 0  
+} else if (data.2$age >=10 & data.2$age <20) {
+  data.2$age_1 <- 1  
+} else if (data.2$age >=20 & data.2$age <30) {
+  data.2$age_1 <- 2  
+} else if (data.2$age >=30 & data.2$age <40) {
+  data.2$age_1 <- 3  
+} else if (data.2$age >=40 & data.2$age <50) {
+  data.2$age_1 <- 4  
+} else if (data.2$age >=50 & data.2$age <60) {
+  data.2$age_1 <- 5  
+} else if (data.2$age >=60 & data.2$age <70) {
+  data.2$age_1 <- 6  
+} else if (data.2$age >=70 & data.2$age <80) {
+  data.2$age_1 <- 7  
+} else {
+  data.2$age_1 <- 8
+}
+
+data.2$age_1 <- as.factor(data.2$age_1)
+
+summary(data.2$age_1)
+
+
+# 값이 완전히 있는 것은 TRUE, 아니면 FALSE로 처리해서 반환
+#complete.cases(source.data.train)
+#source.data.train[complete.cases(source.data.train), ]
+
+#nrow(source.data.train[complete.cases(source.data.train), ])
+
+# 데이터 분할
+# 훈련 데이터 및 테스트 데이터로 분할
+parts <- createDataPartition(y=data.2[complete.cases(data.2), ]$survived , p = 0.8)
+
+# extract training, testsamples
+data.train <- data.2[parts$Resample1, ]
+data.test <- data.2[-parts$Resample1, ]
+
+length(complete.cases(data.test))
+length(complete.cases(data.train))
+
+table(data.train$Survived)
+table(data.test$Survived)
+
+data.train.filtered <- data.train[complete.cases(data.train), ]
+data.test.filtered <- data.test[complete.cases(data.test), ]
+
+```
+
+# 모델 훈련
+- 정형데이터분석
+    - 지도학습 ⇒ 타겟 변수가 존재
+        - 분류
+            - 의사결정나무
+            - 앙상블
+            - SVM
+            - k-NN
+            - ANN
+            - 로지스틱회귀
+            - 나이브베이즈
+        - 예측
+            - 선형회귀
+                - 단순선형회귀
+                - 다중선형회귀
+    - 비지도학습 ⇒ 타겟 변수 미존재
+        - 군집
+            - 계층적군집
+            - 비계층적군집
+            - 혼합분포군집
+        - 연관분석(장바구니분석)
+- 비정형데이터분석
+    - 텍스트마이닝
+```{r, warning = FALSE, message = FALSE}
+# 최적 K를 찾기 위한 함수(train.kknn)
+
+knn.m <- train.kknn(
+  formula = as.factor(survived) ~ pclass + sex + age + fare+embarked + sibsp +parch # 종속변수 ~ 독립변수
+  , data=data.train.filtered
+  , kmax=30 # 최대 K 개수 => K가 1일때부터 30까지 KNN을 수행해보고 분류율을 확인
+)
+
+# 객체에서 사용 가능한 속성 확인
+names(knn.m)
+
+knn.m$best.parameters # 최적 파라미터 => 커널(optimal)m k = 10
+# k최적값을 확인하면, 실제로 kknn함수에서 k로 이용하면 됨
+
+summary(knn.m)
+
+
+```
+# 모델 성능 평가
+- 분류
+    - 정오분류표(혼동행렬) ⇒ accuracy가 1에 가까울수록 좋은 모델
+    - ROC/AUC ⇒ AUC가 1에 가까울수록 좋은 모델
+    - AUC 
+      - 0.9~1.0 => Excellent
+      - 0.8~0.9 => Good
+      - 0.7~0.8 => Fair
+      - 0.6~0.7 => Poor
+      - 0.5~0.6 => Fail
+- 예측 ⇒ MAE, RMSE
+```{r, warning = FALSE, message = FALSE}
+
+knn.pred <- kknn(
+  formula = as.factor(survived) ~ pclass + sex + age + fare+embarked +sibsp +parch
+  , train =data.train.filtered
+  , test =data.test.filtered
+  , k = 10
+  , kernel = "optimal"
+)
+
+#summary(knn.pred)
+
+names(knn.pred)
+
+# 0.8024
+confusionMatrix(
+ data = as.factor(knn.pred$fitted.values) # 예측값
+  , reference = as.factor(data.test.filtered$survived) # 관측값
+)
+
+r <- roc(
+  response = as.numeric(data.test.filtered$survived)
+  , predictor = ifelse(as.numeric(knn.pred$fitted.values) == 2, 1, 0) 
+)
+
+plot.roc(
+  r,
+  col="red"
+  , print.auc=TRUE
+  , max.auc.polygon = TRUE
+  , print.thres=TRUE, print.thres.pch=19, print.thres.col = "red"
+  , auc.polygon=TRUE, auc.polygon.col="#D1F2EB"
+  )
+
+# 0.793
+auc(r)
+
+
+```
+
+# 모델 성능 개선
+
+```{r, warning = FALSE, message = FALSE}
+```
