@@ -10,3 +10,4 @@ jupyterlab==0.35.4
 jedi==0.17.2        # use jedi==0.17.2 since jupyterlab autocomplete(tab key) feature not working
 mlxtend==0.17.0
 xgboost==0.90
+seaborn==0.9.0
