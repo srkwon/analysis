@@ -2,6 +2,7 @@
 
 ## 이용 방법
 - python 3.7+
+- python 인터프리터 버전 세팅시, IntelliJ는 Project Structure > Project SDK 변경  
 - analysis/data-analysis-2021 디렉토리 내에서 venv를 활성화(activation)
 - pip install -r requirements.txt 수행
 - `jupyter notebook` 혹은 `jupyter lab` 명령을 통해서 주피터 노트북 실행
